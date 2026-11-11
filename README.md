@@ -8,7 +8,7 @@
 [![Vue](https://img.shields.io/badge/Vue-3.5-42B883?logo=vuedotjs&logoColor=white&style=flat-square)](https://vuejs.org/)
 [![Milvus](https://img.shields.io/badge/Milvus-2.x-00A1EA?logo=milvus&logoColor=white&style=flat-square)](https://milvus.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white&style=flat-square)](https://docs.docker.com/compose/)
-[![License](https://img.shields.io/badge/License-Commercial-blueviolet?style=flat-square)](#-许可)
+[![License](https://img.shields.io/badge/License-See%20README-lightgrey?style=flat-square)](#-许可)
 
 **MindCrew** 是一套基于 **Agentic RAG（检索增强生成）** 架构的企业级知识检索与智能客服系统。它把分散在 PDF / Word / Markdown 中的企业文档，转化为可直接对话、精准溯源的智能知识资产：检索引擎不是固定流水线，而是由 LLM 实时驱动的 Agent 决策循环；同时通过 **MCP（Model Context Protocol）** 标准协议把知识库能力开放给外部 AI Agent、自动化流程与 IDE 插件。
 
@@ -244,4 +244,6 @@ npm run dev
 
 ## 📄 许可
 
-本项目为商业授权软件。如需授权、定制开发或技术支持，请联系项目维护者。
+本仓库为 MindCrew 的本地部署与二次整理版本，仓库内未附带独立的开源许可证文件。
+
+在商业使用、对外分发或部署到生产环境之前，请先与源码提供方确认授权条款与使用范围；定制开发或技术支持同样请联系源码维护方。
