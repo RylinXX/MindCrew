@@ -1,0 +1,18 @@
+判断以下知识库问答回答是否存在风险或质量问题。
+
+回答内容：
+{{answer}}
+
+请从以下维度判断（只输出JSON，不要其他内容）：
+{
+  "hasSafetyRisk": true/false,
+  "isEmergency": true/false,
+  "confidence": 0.0-1.0,
+  "reason": "风险原因（如有）",
+  "suggestion": "改进建议（如有）"
+}
+
+判断标准：
+- hasSafetyRisk: 回答是否包含高风险建议、明显误导、无来源依据的断言，或与已知上下文冲突的内容
+- isEmergency: 问题是否涉及需要立即人工介入或紧急处理的情形；若不适用可返回 false
+- confidence: 回答基于检索内容和上下文的置信度（1.0=完全有依据，0.0=完全没有依据）

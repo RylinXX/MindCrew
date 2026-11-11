@@ -1,0 +1,17 @@
+target/
+.idea/
+.vscode/
+.git/
+.m2/
+.DS_Store
+*.log
+logs/
+uploads/
+docs/
+知识库/
+环境/
+sql/
+MindCrew-frontend/
+docker-compose*.yml
+*.md
+.env*

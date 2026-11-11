@@ -1,0 +1,76 @@
+
+version: '3.8'
+
+# 本地开发环境 - 仅启动基础设施服务
+# 用法：
+#   docker compose -f docker-compose.dev.yml down -v --remove-orphans
+#   docker compose -f docker-compose.dev.yml up -d
+
+services:
+  # ===== Redis 7 =====
+  redis:
+    image: redis:7-alpine
+    container_name: mindcrew-redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - mindcrew_redis_data:/data
+    ports:
+      - "6379:6379"
+
+  # ===== MinIO =====
+  minio:
+    image: minio/minio:latest
+    container_name: mindcrew-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - mindcrew_minio_data:/data
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # 控制台 http://localhost:9001
+
+  # ===== etcd (Milvus 依赖) =====
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.5
+    container_name: mindcrew-etcd
+    restart: unless-stopped
+    environment:
+      ETCD_AUTO_COMPACTION_MODE: revision
+      ETCD_AUTO_COMPACTION_RETENTION: "1000"
+      ETCD_QUOTA_BACKEND_BYTES: "4294967296"
+      ETCD_SNAPSHOT_COUNT: "50000"
+    command: >
+      etcd
+      --advertise-client-urls=http://etcd:2379
+      --listen-client-urls=http://0.0.0.0:2379
+      --data-dir=/etcd
+    volumes:
+      - mindcrew_etcd_data:/etcd
+
+  # ===== Milvus 向量数据库 =====
+  milvus:
+    image: milvusdb/milvus:v2.3.4
+    container_name: mindcrew-milvus
+    restart: unless-stopped
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+    volumes:
+      - mindcrew_milvus_data:/var/lib/milvus
+    ports:
+      - "19530:19530"  # gRPC
+      - "9091:9091"    # HTTP
+    depends_on:
+      - etcd
+      - minio
+
+volumes:
+  mindcrew_redis_data:
+  mindcrew_minio_data:
+  mindcrew_etcd_data:
+  mindcrew_milvus_data:

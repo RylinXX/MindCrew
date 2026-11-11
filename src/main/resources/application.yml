@@ -1,0 +1,195 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: MindCrew
+
+  # Spring AI 配置（OpenAI 兼容格式，接入阿里云百炼 DashScope）
+  ai:
+    openai:
+      api-key: ${BAILIAN_API_KEY}
+      base-url: https://dashscope.aliyuncs.com/compatible-mode
+      chat:
+        options:
+          model: qwen-plus
+          temperature: 0.7
+      embedding:
+        options:
+          model: text-embedding-v3
+          dimensions: 1024
+    mcp:
+      server:
+        enabled: true
+        name: MindCrew MCP Server
+        version: 1.0.0
+        type: SYNC
+        instructions: 提供 MindCrew agentic RAG 工具能力，支持 doc_search、keyword_search、web_search、recall_memory、store_memory。
+  # 数据库配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/docmind?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  # Redis 配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 0
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
+
+  # 文件上传
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+  # Jackson 配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    serialization:
+      write-dates-as-timestamps: false
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*Mapper.xml
+  type-aliases-package: com.simon.MindCrew.entity
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# ═══════════════════════════════════════════════════════════════════
+# 对象存储 · MinIO（开发/私有化）vs OSS（阿里云生产）
+# 切换方式：改 storage.type 的值即可（minio | oss），后端代码不动
+# ═══════════════════════════════════════════════════════════════════
+# 加密主密钥（用于 AES 加密存储 LLM Provider API Key 等敏感配置）
+# ⚠️ 生产环境必须改成长随机串，通过环境变量注入: CRYPTO_MASTER_KEY=xxx
+crypto:
+  master-key: ${CRYPTO_MASTER_KEY:please-change-me-in-production-32chars-min}
+
+storage:
+  type: minio                  # ⚠️ 想切到 OSS 改成 oss，但先确保下方 oss.access-key/secret-key 已填好
+
+# ─── MinIO 配置（storage.type=minio 时生效）────────────────────
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket-name: mindcrew
+
+# ─── 阿里云 OSS 配置（storage.type=oss 时生效）─────────────────
+# 拿这 5 个信息步骤:
+#   1. https://oss.console.aliyun.com 创建 Bucket → 拿到 endpoint / region / bucket
+#   2. https://ram.console.aliyun.com 创建 RAM 子账号 → 拿到 AccessKey ID + Secret
+#   3. 给子账号授权 AliyunOSSFullAccess（或自定义只授权这一个 Bucket）
+oss:
+  endpoint: https://oss-cn-hangzhou.aliyuncs.com   # 改成你 Bucket 所在地域，可在 OSS 控制台 Bucket 概览页看到
+  region: cn-hangzhou                              # 跟 endpoint 对应的地域 ID
+  bucket: mindcrew-prod                            # 改成你的 Bucket 名
+  access-key: TODO_FILL_YOUR_ACCESS_KEY_ID         # 填 RAM 子账号的 AccessKey ID
+  secret-key: TODO_FILL_YOUR_ACCESS_KEY_SECRET     # 填 RAM 子账号的 AccessKey Secret
+  custom-domain:                                   # 可选 · 配 CDN 加速域名（如 cdn.your-domain.com），不用就留空
+  url-expire-days: 7                               # 预签名 URL 有效期（天），DashScope 拿到要够它处理完
+
+# 本地文件上传配置（头像等文件直接存磁盘，不走 MinIO）
+upload:
+  path: uploads
+
+# Office 文档转换（WPS/老格式经 LibreOffice 转换为现代 OOXML）
+# 部署前置: brew install libreoffice / apt-get install libreoffice
+# 验证: soffice --version
+office:
+  soffice-path: soffice          # Mac 可设 /Applications/LibreOffice.app/Contents/MacOS/soffice
+  convert-timeout: 120
+
+# 视觉识别（OCR + 图片描述），用通义千问 VL；复用 llm.api-key + llm.base-url
+# 切其他厂商：将 model 改为 gpt-4o / claude-3-7-sonnet-latest 即可
+vision:
+  model: qwen-vl-max             # 备选: qwen-vl-plus 便宜版
+  max-tokens: 2000
+  timeout-seconds: 60
+
+# 音频识别（ASR），DashScope Paraformer-v2 异步 API
+# 部署前置: MinIO 需要能给 DashScope 提供"公网可访问的预签名 URL"
+# 本地开发: 可用 ngrok / cpolar 把 MinIO 9000 端口暴露公网
+asr:
+  model: paraformer-v2
+  poll-interval-ms: 3000         # 轮询间隔
+  max-poll-times: 200            # 200 × 3s = 10 分钟超时
+  enable-diarization: true       # 说话人分离
+
+# 视频处理（FFmpeg 抽音轨 + 关键帧 → 走 ASR + VL）
+# 部署前置: brew install ffmpeg / apt-get install ffmpeg
+# 验证: ffmpeg -version
+video:
+  ffmpeg-path: ffmpeg            # Mac 可改 /opt/homebrew/bin/ffmpeg
+  ffprobe-path: ffprobe
+  keyframe-interval: 30          # 每 30 秒抽 1 帧
+  keyframe-max-count: 200        # 单视频最多 200 帧（避免超长视频爆炸）
+  ocr-min-text-length: 4         # 帧 OCR 出来的文字少于此长度只保留描述
+  audio-format: mp3              # 抽音轨编码格式
+  ffmpeg-timeout-seconds: 600    # 单次 FFmpeg 调用最长 10 分钟
+
+# Milvus 配置
+milvus:
+  enabled: true            # 本地无 Milvus 时置 false：向量检索降级为空，关键词检索仍可用
+  host: 127.0.0.1
+  port: 19530
+  collection-name: mindcrew_knowledge
+  dimension: 1024
+
+# JWT 配置
+jwt:
+  secret: ${JWT_SECRET:please-change-me-in-production}
+  expiration: 86400000  # 24小时 (毫秒)
+  refresh-expiration: 604800000  # 7天 (毫秒)
+
+# LLM 配置 (阿里云百炼 DashScope，兼容 OpenAI 接口格式)
+llm:
+  base-url: https://dashscope.aliyuncs.com/compatible-mode
+  api-key: ${BAILIAN_API_KEY}           # 从系统环境变量读取阿里云百炼 API Key
+  model: qwen-plus                      # 可选: qwen-turbo / qwen-plus / qwen-max
+  embedding-model: text-embedding-v3   # 输出维度 1024，与 Milvus 一致
+  timeout: 60
+
+# 重排序配置 (阿里云 gte-rerank，无需 Python 服务)
+reranker:
+  api-url: https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank
+  model: gte-rerank
+
+mindcrew:
+  web-search:
+    enabled: ${DOCMIND_WEB_SEARCH_ENABLED:true}
+    tavily-endpoint: https://api.tavily.com/search
+    api-key: ${TAVILY_API_KEY:}
+    timeout: 30s
+
+# 日志配置
+logging:
+  level:
+    com.simon.MindCrew: DEBUG
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
